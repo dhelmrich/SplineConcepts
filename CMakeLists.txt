@@ -33,8 +33,12 @@ FetchContent_MakeAvailable(tinyxml2)
 file(GLOB_RECURSE SPLINECONCEPTS_SOURCES "${CMAKE_SOURCE_DIR}/splineconcepts/*.cpp" "${CMAKE_SOURCE_DIR}/splineconcepts/*.h")
 # remove
 
+# make export header
+include(GenerateExportHeader)
+
 add_library(splineconcepts ${SPLINECONCEPTS_SOURCES})
-target_include_directories(splineconcepts PUBLIC ${CMAKE_SOURCE_DIR}/splineconcepts)
+generate_export_header(splineconcepts)
+target_include_directories(splineconcepts PUBLIC ${CMAKE_SOURCE_DIR}/splineconcepts ${NUMCPP_INCLUDE_DIRS} ${TINYXML2_INCLUDE_DIRS} ${CMAKE_CURRENT_BINARY_DIR})
 target_link_libraries(splineconcepts PUBLIC NumCpp::NumCpp tinyxml2)
 
 # Provide Python bindings

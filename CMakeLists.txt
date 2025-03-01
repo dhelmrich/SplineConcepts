@@ -5,7 +5,17 @@ project(SplineConcepts)
 # FetchContent for dependencies
 include(FetchContent)
 
+# set CMP0135 policy
+cmake_policy(SET CMP0135 NEW)
+
+# Set to use C++17
+set(CMAKE_CXX_STANDARD 17)
+
 # NumCpp
+# Declare NumCPP options:
+option(NUMCPP_NO_USE_BOOST "Do not use boost" ON)
+option(NUMCPP_USE_MULTITHREAD "Use Multithreding" ON)
+
 FetchContent_Declare(
   numcpp
   GIT_REPOSITORY https://github.com/dpilger26/NumCpp.git
@@ -29,8 +39,18 @@ FetchContent_Declare(
 )
 FetchContent_MakeAvailable(tinyxml2)
 
+include(FetchContent)
+FetchContent_Declare(
+  googletest
+  URL https://github.com/google/googletest/archive/03597a01ee50ed33e9dfd640b249b4be3799d395.zip
+)
+# For Windows: Prevent overriding the parent project's compiler/linker settings
+set(gtest_force_shared_crt ON CACHE BOOL "" FORCE)
+FetchContent_MakeAvailable(googletest)
+include(GoogleTest)
+
 # Add library
-file(GLOB_RECURSE SPLINECONCEPTS_SOURCES "${CMAKE_SOURCE_DIR}/splineconcepts/*.cpp" "${CMAKE_SOURCE_DIR}/splineconcepts/*.h")
+file(GLOB_RECURSE SPLINECONCEPTS_SOURCES "${CMAKE_SOURCE_DIR}/splineconcepts/*.cpp" "${CMAKE_SOURCE_DIR}/splineconcepts/*.hpp")
 # remove
 
 # make export header
@@ -51,6 +71,18 @@ file(GLOB_RECURSE TEST_SOURCES "${CMAKE_SOURCE_DIR}/tests/*.cpp")
 foreach(TEST_SOURCE ${TEST_SOURCES})
   get_filename_component(TEST_NAME ${TEST_SOURCE} NAME_WE)
   add_executable(${TEST_NAME} ${TEST_SOURCE})
-  target_link_libraries(${TEST_NAME} splineconcepts)
+  target_link_libraries(${TEST_NAME} splineconcepts GTest::gtest_main)
+  target_include_directories(${TEST_NAME} PRIVATE ${CMAKE_SOURCE_DIR}/tests ${NUMCPP_INCLUDE_DIRS} ${TINYXML2_INCLUDE_DIRS})
   add_test(NAME ${TEST_NAME} COMMAND ${TEST_NAME})
+  gtest_discover_tests(${TEST_NAME})
 endforeach()
+
+# Add examples
+file(GLOB_RECURSE EXAMPLE_SOURCES "${CMAKE_SOURCE_DIR}/examples/*.cpp")
+foreach(EXAMPLE_SOURCE ${EXAMPLE_SOURCES})
+  get_filename_component(EXAMPLE_NAME ${EXAMPLE_SOURCE} NAME_WE)
+  add_executable(${EXAMPLE_NAME} ${EXAMPLE_SOURCE})
+  target_link_libraries(${EXAMPLE_NAME} splineconcepts)
+  target_include_directories(${EXAMPLE_NAME} PRIVATE ${CMAKE_SOURCE_DIR}/examples ${NUMCPP_INCLUDE_DIRS} ${TINYXML2_INCLUDE_DIRS})
+endforeach()
+

@@ -1,0 +1,18 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Launch CMake Build",
+      "type": "cppvsdbg",
+      "request": "launch",
+      "program": "${workspaceFolder}/build_win/Debug/${fileBasenameNoExtension}.exe",
+      "args": [],
+      "stopAtEntry": false,
+      "cwd": "${workspaceFolder}",
+      "environment": [],
+      "externalConsole": false,
+      "preLaunchTask": "CMake: build",
+      "internalConsoleOptions": "openOnSessionStart"
+    }
+  ]
+}

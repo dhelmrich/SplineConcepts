@@ -200,7 +200,7 @@ public:
 
   void setControlPoint(int i, const nc::Vec3& point)
   {
-    y_(i, y_.cSlice()) = {point.x, point.y, point.z};
+    y_.put(i, y_.cSlice(),{point.x, point.y, point.z});
     computeT();
   }
 

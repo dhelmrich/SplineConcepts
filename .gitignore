@@ -34,3 +34,4 @@
 # build folders
 build/
 build_*/
+/.vscode

@@ -11,9 +11,7 @@
 int main()
 {
   nc::NdArray<double> c = nc::zeros<double>(10, 3);
-  auto& row = c(c.rSlice(), 0);
-  row = nc::linspace<double>(0, 9, 10, nc::EndPoint::YES);
-  c.put(c.rSlice(), 0, row);
+  c.put(c.rSlice(), 0, nc::linspace<double>(0, 9, 10, nc::EndPoint::YES));
   const auto spline = std::make_shared<CatmulRomSpline>(c, 0);
 
   std::cout << "Spline points: " << std::endl;

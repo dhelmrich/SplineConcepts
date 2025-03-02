@@ -118,7 +118,7 @@ public:
     std::size_t hash = 0;
     for (int i = 0; i < y_.numRows(); ++i)
     {
-      hash += std::hash<nc::Vec3>{}(y_[i, y_.cSlice()]);
+      hash += std::hash<nc::Vec3>{}(y_(i, y_.cSlice()));
     }
     return hash;
   }
@@ -142,10 +142,10 @@ public:
     {
       const double tStart = (i == segment0) ? t0 : t_[i];
       const double tEnd = (i == segment1) ? t1 : t_[i + 1];
-      const auto p0 = (i == 0) ? prevPoint_ : y_[i - 1, y_.cSlice()];
-      const auto p1 = y_[i, y_.cSlice()];
-      const auto p2 = y_[i + 1, y_.cSlice()];
-      const auto p3 = (i == y_.numRows() - 2) ? nextPoint_ : y_[i + 2, y_.cSlice()];
+      const auto p0 = (i == 0) ? prevPoint_ : y_(i - 1, y_.cSlice());
+      const auto p1 = y_(i, y_.cSlice());
+      const auto p2 = y_(i + 1, y_.cSlice());
+      const auto p3 = (i == y_.numRows() - 2) ? nextPoint_ : y_(i + 2, y_.cSlice());
 
       const auto a = 6.0 * p0 - 12.0 * p1 + 6.0 * p2;
       const auto b = -3.0 * p0 + 9.0 * p1 - 9.0 * p2 + 3.0 * p3;

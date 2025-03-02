@@ -2,6 +2,18 @@ cmake_minimum_required(VERSION 3.14)
 
 project(SplineConcepts)
 
+# Set default build folder if not otherwise specified
+if(NOT CMAKE_BUILD_TYPE)
+  if(WIN32)
+    set(CMAKE_BUILD_TYPE "build_windows")
+  elseif(UNIX AND NOT APPLE)
+    set(CMAKE_BUILD_TYPE "build_linux")
+  elseif(APPLE)
+    set(CMAKE_BUILD_TYPE "build_macos")
+  endif()
+endif()
+
+
 # FetchContent for dependencies
 include(FetchContent)
 

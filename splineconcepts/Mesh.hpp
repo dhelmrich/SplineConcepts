@@ -60,6 +60,45 @@ public:
     return true;
   }
 
+  Mesh& clean(bool inPlace = false)
+  {
+    // cleaning rules: choose a direction by which the splines are split
+    auto& max_intersect_spline = splines_[0];
+    auto& max_intersect_spline_index = 0;
+    for (size_t i = 0; i < splines_.size(); ++i)
+    {
+      auto& spline = splines_[i];
+      for (size_t j = 0; j < splines_.size(); ++j)
+      {
+        if (i == j)
+        {
+          continue;
+        }
+        if (perpMap_[i][j])
+        {
+          // check if the splines intersect
+          if (spline->intersects(splines_[j]))
+          {
+            // check if the intersection is larger than the current max
+            if (spline->intersection(splines_[j]).size() > max_intersect_spline->intersection(splines_[max_intersect_spline_index]).size())
+            {
+              max_intersect_spline = spline;
+              max_intersect_spline_index = i;
+            }
+          }
+        }
+      }
+    }
+    // split other splines at this spline
+    for (size_t i = 0; i < splines_.size(); ++i)
+    {
+      if (i == max_intersect_spline_index)
+      {
+        continue;
+      }
+    }
+  }
+
   /**
    * @brief Compute spline array hash.
    */

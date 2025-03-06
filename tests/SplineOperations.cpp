@@ -58,7 +58,7 @@ TEST(Spline, FindSegment)
 TEST(Spline, StraightLine)
 {
   nc::NdArray<double> controlPoints = nc::zeros<double>(10, 3);
-  controlPoints(controlPoints.rSlice(), 0) = nc::linspace<double>(0, 10, 10);
+  controlPoints.put(controlPoints.rSlice(), 0, nc::linspace<double>(0, 10, 10));
   const auto spline = std::make_shared<CatmulRomSpline>(controlPoints, 0);
 
   for (int i = 0; i < 10; ++i)

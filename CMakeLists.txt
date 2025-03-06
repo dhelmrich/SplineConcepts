@@ -22,6 +22,8 @@ cmake_policy(SET CMP0135 NEW)
 
 # Set to use C++17
 set(CMAKE_CXX_STANDARD 17)
+# Set to treat warnings as errors
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Werror")
 
 # NumCpp
 # Declare NumCPP options:

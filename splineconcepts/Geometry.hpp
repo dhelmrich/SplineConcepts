@@ -6,6 +6,10 @@
 #include <vector>
 #include <iterator>
 #include <array>
+#include <optional>
+#include <algorithm>
+#include <functional>
+#include <tuple>
 #include <numeric>
 
 // export
@@ -17,7 +21,7 @@ class Geometry
 {
 public:
   nc::NdArray<double> v_;
-  nc::NdArray<int> f_;
+  std::vector<std::array<nc::NdArray<double>::size_type, 3>> f_;
   nc::NdArray<double> n_;
   nc::NdArray<double> c_;
   nc::NdArray<double> uv_;
@@ -28,20 +32,20 @@ public:
   Geometry() = default;
   ~Geometry() = default;
 
-  void fillBetween(const nc::NdArray<double>& pointsLower, const nc:ndArray<double>& pointsUpper)
+  void fillBetween(const nc::NdArray<double>& pointsLower, const nc::NdArray<double>& pointsUpper)
   {
     if (pointsLower.numCols() != 3 || pointsUpper.numCols() != 3)
     {
       throw std::invalid_argument("Geometry: pointsLower and pointsUpper must have 3 columns.");
     }
     
-    const auto A& = (pointsLower.numRows() < pointsUpper.numRows()) ? pointsLower : pointsUpper;
-    const auto B& = (pointsLower.numRows() <= pointsUpper.numRows()) ? pointsUpper : pointsLower;
+    const auto& A = (pointsLower.numRows() < pointsUpper.numRows()) ? pointsLower : pointsUpper;
+    const auto& B = (pointsLower.numRows() <= pointsUpper.numRows()) ? pointsUpper : pointsLower;
     const auto numA = A.numRows();
     const auto numB = B.numRows();
     const auto numPoints = numA + numB;
     const auto offset = v_.numRows();
-    v_.resize(offset + numPoints, 3);
+    v_.reshape(offset + numPoints, 3);
     // if there is a difference in the number of points, we choose evenly spaced indices in the smaller array that expand to the larger array
     int diff = numB - numA;
     auto indices = nc::linspace<int>(0, numA - 1, numPoints);
@@ -56,20 +60,19 @@ public:
       if(indices.contains(Ai))
       {
         // triangle with two from B and one from A
-        f_.append({offset + Ai, offset + numA + Bi, offset + numA + Bi + 1});
-        ++Bi;
+        f_.push_back({offset + Ai, offset + numA + Bi, offset + numA + Bi + 1});
       }
       // no matter if an expansion was made, still triangulate the normal pair
       // triangle with two from A and one from B
-      f_.append({offset + Ai + 1, offset + Ai, offset + numA + Bi});
+      f_.push_back({offset + Ai + 1, offset + numA + Bi, offset + numA + Bi + 1});
       // triangle with one from A and two from B
-      f_.append({offset + Ai + 1, offset + numA + Bi, offset + numA + Bi + 1});
+      f_.push_back({offset + Ai, offset + Ai + 1, offset + numA + Bi + 1});
       ++Ai;
       ++Bi;
     }
   }
 
-  nc::NdArray<double> kMeans(const nc::NdArray<double>& points, int numClusters = 3)
+  std::tuple<nc::NdArray<double>,nc::NdArray<int>> kMeans(const nc::NdArray<double>& points, int numClusters = 3, double* rating = nullptr)
   {
     if (points.numCols() != 3)
     {
@@ -80,7 +83,7 @@ public:
     nc::NdArray<double> clusterCenters = nc::zeros<double>(numClusters, 3);
     for (int i = 0; i < numClusters; ++i)
     {
-      clusterCenters.put(i, clusterCenters.cSlice(), points(nc::random<int>(0, numPoints - 1), nc::Slice(0, 3)));
+      clusterCenters.put(i, clusterCenters.cSlice(), points(nc::random::randInt<int>(0, numPoints - 1), nc::Slice(0, 3)));
     }
     // initialize the cluster assignments
     nc::NdArray<int> clusterAssignments = nc::zeros<int>(numPoints);
@@ -117,34 +120,56 @@ public:
       }
       for (int i = 0; i < numClusters; ++i)
       {
-        newClusterCenters.put(i, newClusterCenters.cSlice(), newClusterCenters(i, nc::Slice(0, 3)) / clusterSizes[i]);
+        newClusterCenters.put(i, newClusterCenters.cSlice(), newClusterCenters(i, nc::Slice(0, 3)) / static_cast<double>(clusterSizes[i]));
       }
       // check for convergence
-      converged = nc::all(nc::all(newClusterCenters == clusterCenters));
+      converged = nc::all(nc::all(newClusterCenters == clusterCenters)).item();
       clusterCenters = newClusterCenters;
     }
-    return clusterCenters;
+    // calculate the rating if requested
+    if (rating != nullptr)
+    {
+      *rating = 0.0;
+      for (int i = 0; i < numPoints; ++i)
+      {
+        const auto point = points(i, nc::Slice(0, 3));
+        const auto clusterCenter = clusterCenters(clusterAssignments[i], nc::Slice(0, 3));
+        *rating += nc::norm(point - clusterCenter)[0];
+      }
+    }
+    return std::make_tuple(clusterCenters, clusterAssignments);
   }
 
-  void fillWithin(const nc::NdArray<double>& pointsSurround)
+  void fillWithin(const nc::NdArray<double>& pointsSurround, std::optional<int> fixedMidpoints = std::nullopt)
   {
     // persistence based determination how many mid points we need
     const auto numPoints = pointsSurround.numRows();
     const auto offset = v_.numRows();
-    double smallest_distance = std::numeric_limits<double>::max();
-    for (int i = 0; i < numPoints; ++i)
-    {
-      const auto distance = nc::norm(pointsSurround(i, nc::Slice(0, 3)) - pointsSurround((i + 1) % numPoints, nc::Slice(0, 3)))[0];
-      if (distance < smallest_distance)
-      {
-        smallest_distance = distance;
-      }
-    }
+    double rating = 0.0;
+    double ratingPrev = std::numeric_limits<double>::max();
     // find the minimal set of points that has direct line of sight to all points
     int numMidpoints = 1;
-    std::vector<nc::Vec3> midpoints;
-    midpoints.push_back(nc::average(pointsSurround,nc::Axis::ROW));
-
+    nc::NdArray<double> midpoints;
+    nc::NdArray<int> clusterAssignments;
+    if (fixedMidpoints.has_value())
+    {
+      numMidpoints = fixedMidpoints.value();
+    }
+    else while(rating < ratingPrev)
+    {
+      ratingPrev = rating;
+      tie(midpoints, clusterAssignments) = kMeans(pointsSurround, numMidpoints, &rating);
+    }
+    // fill the vertices
+    v_.reshape(offset + numPoints + numMidpoints, 3);
+    v_.put(nc::Slice(offset, offset + numPoints), v_.cSlice(), pointsSurround);
+    v_.put(nc::Slice(offset + numPoints, offset + numPoints + numMidpoints), v_.cSlice(), midpoints);
+    // fill the triangles
+    for (int i = 0; i < numPoints; ++i)
+    {
+      f_.push_back({offset + i, offset + (i + 1) % numPoints, offset + numPoints + clusterAssignments[i]});
+    }
+    
   }
 
 };

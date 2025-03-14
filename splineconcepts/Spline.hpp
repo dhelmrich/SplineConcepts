@@ -42,7 +42,43 @@ class SPLINECONCEPTS_EXPORT Spline
   // Construction / Destruction
 public:
   virtual ~Spline() = default;
-
+  bool intersects(const Spline& other) const
+  {
+    // coarse resolution of finding sampling over t \in [0, 1]^2
+    const int numPoints = 10;
+    for (int i = 0; i < numPoints; ++i)
+    {
+      const double t0 = static_cast<double>(i) / (numPoints - 1);
+      for (int j = 0; j < numPoints; ++j)
+      {
+        const double t1 = static_cast<double>(j) / (numPoints - 1);
+        if ((operator()(t0) - other(t1)).norm() < 1e-6)
+        {
+          return true;
+        }
+      }
+    }
+    return false;
+  }
+  std::vector<std::pair<double,double>> intersections(const Spline& other) const
+  {
+    std::vector<std::pair<double,double>> result;
+    // coarse resolution of finding sampling over t \in [0, 1]^2
+    const int numPoints = 10;
+    for (int i = 0; i < numPoints; ++i)
+    {
+      const double t0 = static_cast<double>(i) / (numPoints - 1);
+      for (int j = 0; j < numPoints; ++j)
+      {
+        const double t1 = static_cast<double>(j) / (numPoints - 1);
+        if ((operator()(t0) - other(t1)).norm() < 1e-6)
+        {
+          result.push_back(std::make_pair(t0, t1));
+        }
+      }
+    }
+    return result;
+  }
   // Public Methods
 public:
   virtual nc::Vec3 operator()(double t) const = 0;

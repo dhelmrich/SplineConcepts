@@ -4,7 +4,7 @@ This is a transcription of my blackboard notes.
 
 ## Definition
 
-A mesh $M$ consists of a set of splines ${S_1, \cdots, $S_2}$ and a set of properties $P$.
+A mesh $M$ consists of a set of splines $\{S_1, \cdots, S_2\}$ and a set of properties $P$.
 
 
 ## Closure

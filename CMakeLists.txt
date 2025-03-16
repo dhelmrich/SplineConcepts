@@ -26,9 +26,6 @@ set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Werror")
 
 # NumCpp
-# Declare NumCPP options:
-option(NUMCPP_NO_USE_BOOST "Do not use boost" ON)
-option(NUMCPP_USE_MULTITHREAD "Use Multithreding" ON)
 
 FetchContent_Declare(
   numcpp

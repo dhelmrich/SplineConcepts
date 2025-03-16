@@ -45,7 +45,7 @@ public:
     const auto numB = B.numRows();
     const auto numPoints = numA + numB;
     const auto offset = v_.numRows();
-    v_.reshape(offset + numPoints, 3);
+    v_ = nc::zeros<double>(numPoints, 3);
     // if there is a difference in the number of points, we choose evenly spaced indices in the smaller array that expand to the larger array
     int diff = numB - numA;
     auto indices = nc::linspace<int>(0, numA - 1, numPoints);
@@ -170,6 +170,56 @@ public:
       f_.push_back({offset + i, offset + (i + 1) % numPoints, offset + numPoints + clusterAssignments[i]});
     }
     
+  }
+
+  void extrudeAround(const Spline& spline, const nc::NdArray<double>& base, int resolution = 20, std::optional<nc::NdArray<double>> radius = std::nullopt)
+  {
+    if (base.numCols() != 3)
+    {
+      throw std::invalid_argument("Geometry: base must have 3 columns.");
+    }
+    if (radius.has_value() && radius.value().numCols() != 1)
+    {
+      throw std::invalid_argument("Geometry: radius must have 1 column.");
+    }
+    // base: n x 3, to be placed perpendicularly around the spline, triangles filling between base shapes
+    // resolution: number of times the base shape is placed around the spline
+    // radius: n x 1, radius of the base shape
+    const auto numBase = base.numRows();
+    const auto numVertices = numBase * resolution;
+    const auto offset = v_.numRows();
+    v_ = nc::zeros<double>(numVertices, 3);
+    // fill the geometry
+    for (int i = 0; i < resolution; ++i)
+    {
+      const auto t = static_cast<double>(i) / (resolution - 1);
+      const auto point = spline(t);
+      const auto tangent = spline.derivative(t);
+      const auto normal = spline.secondDerivative(t);
+      const auto binormal = tangent.cross(normal).normalize();
+      for (int j = 0; j < numBase; ++j)
+      {
+        const auto radiusValue = (radius.has_value()) ? (radius.value())[j] : 1.0;
+        // rotate the base shape with the quaternion
+        const auto basePoint = base(j, nc::Slice(0, 3));
+        // place the base shape around the spline
+        const auto finalPoint = point + radiusValue * (basePoint[0] * normal + basePoint[1] * binormal + basePoint[2] * tangent);
+        v_.put(offset + i * numBase + j, v_.cSlice(), finalPoint.toNdArray());
+        // append triangles for this point
+        if (i > 0 && j > 0)
+        {
+          f_.push_back({offset + i * numBase + j, offset + i * numBase + j - 1, offset + (i - 1) * numBase + j - 1});
+          f_.push_back({offset + i * numBase + j, offset + (i - 1) * numBase + j - 1, offset + (i - 1) * numBase + j});
+        }
+        // normal = point - spline point
+        n_.put(offset + i * numBase + j, n_.cSlice(), (finalPoint - point).normalize().toNdArray());
+        // texture coordinates: u = t, v = j / numBase
+        uv_.put(offset + i * numBase + j, uv_.cSlice(), {t, static_cast<double>(j) / numBase});
+        // tangent = spline derivative
+        t_.put(offset + i * numBase + j, t_.cSlice(), tangent.toNdArray());
+        
+      }
+    }
   }
 
 };

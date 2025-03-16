@@ -17,5 +17,14 @@ int main()
   // fill the geometry object
   geometry.fillBetween(pointsLower, pointsUpper);
 
+  // print out the vertices
+  std::cout << geometry.v_ << std::endl;
+
+  // print out the triangles
+  for (const auto& triangle : geometry.f_)
+  {
+    std::cout << triangle[0] << " " << triangle[1] << " " << triangle[2] << std::endl;
+  }
+
   return 0;
 }

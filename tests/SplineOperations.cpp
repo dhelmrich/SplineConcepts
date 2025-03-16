@@ -49,7 +49,7 @@ TEST(Spline, FindSegment)
   const auto spline = std::make_shared<CatmulRomSpline>(controlPoints, 0);
   EXPECT_DOUBLE_EQ(spline->findSegment(0.0), 0);
   EXPECT_DOUBLE_EQ(spline->findSegment(0.5), 0);
-  EXPECT_DOUBLE_EQ(spline->findSegment(1.0), 1);
+  EXPECT_DOUBLE_EQ(spline->findSegment(2.0), 2);
   
 }
 

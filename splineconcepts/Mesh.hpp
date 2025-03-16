@@ -12,6 +12,7 @@
 #include "splineconcepts_export.h"
 
 #include "Spline.hpp"
+#include "Geometry.hpp"
 
 /**
  * @brief A class containing a mesh of splines.
@@ -60,8 +61,9 @@ public:
     return true;
   }
 
-  Mesh& clean(bool inPlace = false)
+  Mesh* clean(bool inPlace = false)
   {
+    Mesh* mesh = (inPlace) ? this : new Mesh(splines_);
     // cleaning rules: choose a direction by which the splines are split
     auto& max_intersect_spline = splines_[0];
     auto max_intersect_spline_index = 0;
@@ -97,6 +99,7 @@ public:
         continue;
       }
     }
+    return mesh;
   }
 
   /**

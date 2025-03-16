@@ -22,7 +22,7 @@ int main()
 
   for (int i = 0; i < 10; ++i)
   {
-    const double t = static_cast<double>(i) / 9.0;
+    const double t = static_cast<double>(i);
     const auto point = spline->operator()(t);
     std::cout << "spline(" << t << ") = " << point << std::endl;
   }

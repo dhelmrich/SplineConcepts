@@ -60,7 +60,7 @@ public:
     }
     return false;
   }
-  std::vector<std::pair<double,double>> intersections(const Spline& other) const
+  std::vector<std::pair<double,double>> intersection(const Spline& other) const
   {
     std::vector<std::pair<double,double>> result;
     // coarse resolution of finding sampling over t \in [0, 1]^2
@@ -83,6 +83,7 @@ public:
 public:
   virtual nc::Vec3 operator()(double t) const = 0;
   virtual nc::Vec3 derivative(double t) const = 0;
+  virtual nc::Vec3 secondDerivative(double t) const = 0;
   virtual nc::NdArray<double> toNdArray(const int numPoints) const = 0;
   virtual double length(double t0, double t1) const = 0;
   virtual double length() const = 0;
@@ -121,7 +122,12 @@ public:
 
   nc::Vec3 operator()(double t) const override
   {
-    PREINITIALIZE_SPLINE_VARIABLES();
+    const auto segment = findSegment(t);
+    const auto tSegment = (t - t_[segment]) / (t_[segment + 1] - t_[segment]);
+    const nc::Vec3 p0 = (segment == 0) ? prevPoint_ : y_(segment - 1, y_.cSlice());
+    const nc::Vec3 p1 = y_(segment, y_.cSlice());
+    const nc::Vec3 p2 = y_(segment + 1, y_.cSlice());
+    const nc::Vec3 p3 = (segment == y_.numRows() - 2) ? nextPoint_ : y_(segment + 2, y_.cSlice());
     const nc::Vec3 quadp = 0.5 * ((2.0 * p1) + (-p0 + p2) * tSegment + (2.0 * p0 - 5.0 * p1 + 4.0 * p2 - p3) * tSegment * tSegment + (-p0 + 3.0 * p1 - 3.0 * p2 + p3) * tSegment * tSegment * tSegment);
     const nc::Vec3 linp = p1 + tSegment * (p2 - p1);
     return quadp * alpha_ + linp * (1.0 - alpha_);
@@ -135,7 +141,7 @@ public:
     return quadp * alpha_ + linp * (1.0 - alpha_);
   }
 
-  nc::Vec3 secondDerivative(double t) const
+  nc::Vec3 secondDerivative(double t) const override
   {
     PREINITIALIZE_SPLINE_VARIABLES();
     const nc::Vec3 quadp = 0.5 * (2.0 * (2.0 * p0 - 5.0 * p1 + 4.0 * p2 - p3) + 6.0 * (-p0 + 3.0 * p1 - 3.0 * p2 + p3) * tSegment);
@@ -224,10 +230,18 @@ public:
                          .reshape(3, 3);
     return nc::rotations::Quaternion(dcm);
   }
+
   inline int findSegment(double t) const
   {
-    const auto it = std::upper_bound(t_.begin(), t_.end(), t);
-    return std::distance(t_.begin(), it);
+    double t0 = 0.0;
+    for (int i = 0; i < t_.size(); ++i)
+    {
+      if (t_[i] > t)
+      {
+        return i - 1;
+      }
+    }
+    return t_.size() - 2;
   }
 
   nc::Vec3 getControlPoint(int i) const
@@ -247,18 +261,23 @@ public:
 protected:
   void computeT()
   {
+    const auto n = y_.numRows();
     // generate differences
     t_ = nc::diff(y_, nc::Axis::ROW);
     // compute the norm of the differences
     t_ = nc::sqrt(nc::sum(nc::power(t_, 2.0), nc::Axis::COL));
     t_ = nc::cumsum(t_);
-    // normalize the differences
-    //t_ = t_ / t_.back();
+    // add zero at the beginning
+    t_ = nc::insert(t_, 0, 0.0, nc::Axis::COL);
 
     // compute previous point as extension of the first segment
-    prevPoint_ = y_(0, y_.cSlice()) - t_[0] * (y_(1, y_.cSlice()) - y_(0, y_.cSlice()));
+    const nc::Vec3 diff1 = y_(1, y_.cSlice()) - y_(0, y_.cSlice());
+    prevPoint_ = y_(0, y_.cSlice());
+    prevPoint_ = prevPoint_ - diff1;
     // compute next point as extension of the last segment
-    nextPoint_ = y_(-1, y_.cSlice()) + t_[-1] * (y_(-1, y_.cSlice()) - y_(-2, y_.cSlice()));
+    const nc::Vec3 diff2 = y_(n-1, y_.cSlice()) - y_(n-2, y_.cSlice());
+    nextPoint_ = y_(n-1, y_.cSlice());
+    nextPoint_ = nextPoint_ + diff2;
   }
 
 

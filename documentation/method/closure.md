@@ -11,7 +11,7 @@ A mesh $M$ consists of a set of splines $\lbrace S_1, \cdots, S_2\rbrace$ and a 
 
 We only look at a section. If there is something about the mesh that is not closed, but individually they are closed, then the mesh just consists of two meshes.
 
-**Perpentidularity**: $S_1 \perp S_2$ if $\exists t \in \mathscr{D}_\mathbb{R}(S_1) \wedge \exists t' \in \mathscr{D}_\mathbb{R}(S_2) : S_1(t) = S_2(t')$.
+**Perpentidularity**: $`S_1 \perp S_2$ if $\exists t \in \mathscr{D}_\mathbb{R}(S_1) \wedge \exists t' \in \mathscr{D}_\mathbb{R}(S_2) : S_1(t) = S_2(t')`$.
 
 **Closure**: A mesh is closed if $\forall S \in M : \exists S' \in M : S \perp S'$.
 
